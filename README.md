@@ -1,6 +1,8 @@
 # Allo Innoware recurring task automation
 
-A Google Sheets and Apps Script prototype for tracking recurring tasks, recording completion, and escalating overdue work.
+AI Operations / Founder’s Office assignment · Nanda Kishore
+
+The prototype gives employees one place to see and complete their recurring tasks. The manager uses a single queue to acknowledge overdue work and track resolution. Leadership receives an escalation when review or resolution misses its deadline.
 
 | File | Contents |
 | --- | --- |
@@ -13,10 +15,12 @@ A Google Sheets and Apps Script prototype for tracking recurring tasks, recordin
 
 1. Upload the workbook to Drive and save it as a native Google Sheet.
 2. Open **Extensions → Apps Script**, replace `Code.gs` with the supplied source, save, and reload the sheet.
-3. Choose **Allo Ops → Initialize / verify workbook**. Follow the **Demo & Tests** tab from the starting clock of **26 Nov 2026, 16:45 IST**. Edit `Settings!B9` to advance time.
+3. Choose **Allo Ops → Initialize / verify workbook**. The demo starts at **26 Nov 2026, 16:45 IST**. Follow **Demo & Tests**. When instructed to advance time, edit `Settings!B9` and run **Allo Ops → Refresh queues and check alerts**.
 4. Enter a portal Ticket ID or `POSTED` for the WhatsApp task in an employee row, then choose **Submit proof for selected row**. The manager acknowledges separately in **Manager Queue**.
 
-The demo uses simulated time and records email payloads in **Alert Log**. The configured deadline is 17:00 IST. Leadership is notified once if an open task misses the 60-minute acknowledgement window or stays open after 180 minutes. The **Start Here** tab covers live setup and the five-minute polling trigger.
+The demo uses simulated time and records email payloads in **Alert Log**. Employee A’s WhatsApp task recurs on weekdays. The portal tasks recur 7, 15, or 30 calendar days after the last completion date.
+
+The first check at or after **17:00 IST** alerts the manager. Leadership receives one escalation per open cycle if the manager misses the **60-minute** acknowledgement deadline or if the task remains open after **180 minutes**. Both windows start from the manager alert attempt. **Start Here** covers live setup and the five-minute polling trigger.
 
 ## Verification
 
