@@ -7,7 +7,7 @@ const results = [];
 const emails = [];
 const alerts = [];
 const props = new Map();
-let book, selected, actor = 'reviewer@example.test', time, handlers = [], failSend = false;
+let book, selected, actor = 'reviewer@example.test', time, handlers = [], failSend = false, advanceOnQuota = '';
 let locked = false;
 const format = t => new Date(+t + 330 * 60000).toISOString().slice(0, 16).replace('T', ' ');
 const date = s => new Date(s.replace(' ', 'T') + ':00+05:30');
@@ -71,7 +71,13 @@ const context = vm.createContext({ Date: Clock, console: { error: () => {} },
   },
   PropertiesService: { getScriptProperties: () => ({ getProperty: key => props.get(key), setProperty: (k, v) => props.set(k, v) }) },
   LockService: { getScriptLock: () => ({ waitLock: () => { assert(!locked); locked = true; }, releaseLock: () => { locked = false; } }) },
-  MailApp: { getRemainingDailyQuota: () => 50, sendEmail: mail => {
+  MailApp: { getRemainingDailyQuota: () => {
+    if (advanceOnQuota) {
+      time = advanceOnQuota;
+      advanceOnQuota = '';
+    }
+    return 50;
+  }, sendEmail: mail => {
     assert(locked);
     const latest = records('Alert Log', 9).at(-1);
     assert.equal(latest[3], 'CLAIMED');
@@ -97,7 +103,7 @@ function reset(mode = 'DEMO') {
   const tabs = new Map([...people, 'Manager Queue', 'Task Master', 'Settings', 'Alert Log'].map((name, i) => [name, new Sheet(name, i)]));
   book = { getSheetByName: name => tabs.get(name), getId: () => 'test-book', getUrl: () => 'https://docs.google.com/spreadsheets/d/test-book/edit',
     getActiveRange: () => selected, toast() {}, setSpreadsheetTimeZone() {} };
-  props.clear(); emails.length = 0; handlers = []; failSend = false;
+  props.clear(); emails.length = 0; handlers = []; failSend = false; advanceOnQuota = '';
   actor = 'reviewer@example.test';
   time = OPS.demoClock;
   book.getSheetByName('Settings').getRange('B6:B11').setValues([mode, ...defaults.slice(1)].map(value => [value]));
@@ -214,13 +220,26 @@ test('Additional · Live transport and access', () => {
   assert.throws(() => enter(people[1], 'TKT-7001'), /Only the assigned/);
   actor = 'employee.b@example.test'; enter(people[1], 'TKT-7001');
   actor = 'manager@example.test'; installClock(); installClock(); assert.equal(handlers.length, 1);
-  time = '2026-11-26 17:00'; clockCheck(); clockCheck();
+  time = '2026-11-26 17:00'; advanceOnQuota = '2026-11-26 17:03'; clockCheck(); clockCheck();
   assert.equal(emails.length, 3);
   assert.equal(log(portalC, 'MANAGER')[3], 'SENT');
+  assert.equal(format(log(portalC, 'MANAGER')[4]), '2026-11-26 17:03');
   actor = 'employee.d@example.test'; assert.throws(() => ack(portalC), /Only the configured manager/);
-  failSend = true; time = '2026-11-26 18:00'; clockCheck(); clockCheck();
+  time = '2026-11-26 18:02'; clockCheck(); assert.equal(emails.length, 3);
+  failSend = true; time = '2026-11-26 18:03'; clockCheck(); clockCheck();
   assert.equal(emails.length, 6);
   assert.equal(log(portalC, 'LEADERSHIP')[3], 'CHECK DELIVERY');
 }, 'Mock clock installed once. Live mode enforced account roles, claimed each email before sending and flagged ambiguous delivery.');
+
+test('Additional · Recipient limit', () => {
+  reset();
+  const recipients = Array.from({ length: 50 }, (_, i) => `leadership${i}@example.test`);
+  const cell = book.getSheetByName('Settings').getRange('B8');
+  cell.setValue([...recipients, recipients[0]].join(','));
+  runNow();
+  cell.setValue([...recipients, 'overflow@example.test'].join(','));
+  assert.throws(() => runNow(), /no more than 50 distinct leadership/);
+  assert.equal(emails.length, 0);
+}, 'The setting accepts 50 distinct recipients and rejects 51 before any alert can be claimed.');
 
 console.table(results.map(([scenario, outcome]) => ({ scenario, outcome })));

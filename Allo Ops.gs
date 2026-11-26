@@ -183,6 +183,7 @@ function readState_(book) {
   require_(validEmail_(config.manager) && config.leaders.length && config.leaders.every(validEmail_),
     'Enter a manager email and at least one leadership email in Settings.');
   config.leaders = [...new Set(config.leaders)];
+  require_(config.leaders.length <= 50, 'Enter no more than 50 distinct leadership email addresses.');
   require_(Number.isInteger(config.reviewMinutes) && config.reviewMinutes > 0 &&
     Number.isInteger(config.resolveMinutes) && config.resolveMinutes >= config.reviewMinutes,
     'Enter positive whole SLA minutes, with resolution at least as long as review.');
@@ -313,7 +314,7 @@ function deliver_(book, state, cycle, alert) {
     book.getUrl() + '#gid=' + managerSheet.getSheetId()].join('\n');
   const sheet = book.getSheetByName('Alert Log');
   const row = Math.max(OPS.first, sheet.getLastRow() + 1);
-  const record = { id, status: demo ? 'SIMULATED' : 'CLAIMED', at: state.now };
+  const record = { id, status: demo ? 'SIMULATED' : 'CLAIMED', at: demo ? state.now : Date.now() };
   rows_(sheet, row, 1, 9).setValues([[id, cycle.id, stage, record.status, new Date(record.at),
     recipients.join(', '), subject, body, '']]);
   sheet.getRange(row, 5).setNumberFormat('dd mmm yyyy HH:mm');
